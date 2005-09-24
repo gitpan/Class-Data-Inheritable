@@ -2,9 +2,32 @@ package Class::Data::Inheritable;
 
 use strict qw(vars subs);
 use vars qw($VERSION);
-$VERSION = '0.02';
+$VERSION = '0.03';
 
-=pod
+sub mk_classdata {
+    my ($declaredclass, $attribute, $data) = @_;
+
+    if( ref $declaredclass ) {
+        require Carp;
+        Carp::croak("mk_classdata() is a class method, not an object method");
+    }
+
+    my $accessor = sub {
+        my $wantclass = ref($_[0]) || $_[0];
+
+        return $wantclass->mk_classdata($attribute)->(@_)
+          if @_>1 && $wantclass ne $declaredclass;
+
+        $data = $_[1] if @_>1;
+        return $data;
+    };
+
+    my $alias = "_${attribute}_accessor";
+    *{$declaredclass.'::'.$attribute} = $accessor;
+    *{$declaredclass.'::'.$alias}     = $accessor;
+}
+
+__END__
 
 =head1 NAME
 
@@ -21,7 +44,6 @@ Class::Data::Inheritable - Inheritable, overridable class data
   # Declare the location of the data file for this class.
   Stuff->DataFile('/etc/stuff/data');
   
-
 =head1 DESCRIPTION
 
 Class::Data::Inheritable is for creating accessor/mutators to class
@@ -50,7 +72,7 @@ The interesting part happens when a class inherits from Pere::Ubu:
 
 Raygun inherits its Suitcase class data from Pere::Ubu.
 
-Inheritance of class data works analgous to method inheritance.  As
+Inheritance of class data works analogous to method inheritance.  As
 long as Raygun does not "override" its inherited class data (by using
 Suitcase() to set a new value) it will continue to use whatever is set
 in Pere::Ubu and inherit further changes:
@@ -71,12 +93,9 @@ no longer effect Raygun.
   # Raygun still has an orange suitcase, but Pere::Ubu is using Samsonite.
   Pere::Ubu->Suitcase('Samsonite');
 
-
 =head1 Methods
 
-=over 4
-
-=item B<mk_classdata>
+=head2 mk_classdata
 
   Class->mk_classdata($data_accessor_name);
 
@@ -97,42 +116,27 @@ yet still get the benefits of inheritable class data.  For example.
       $self->_Suitcase_accessor(@_);
   }
 
-=cut
-
-sub mk_classdata {
-    my ($declaredclass, $attribute, $data) = @_;
-
-    my $accessor = sub {
-        my $wantclass = ref($_[0]) || $_[0];
-
-        return $wantclass->mk_classdata($attribute)->(@_)
-          if @_>1 && $wantclass ne $declaredclass;
-
-        $data = $_[1] if @_>1;
-        return $data;
-    };
-
-    my $alias = "_${attribute}_accessor";
-    *{$declaredclass.'::'.$attribute} = $accessor;
-    *{$declaredclass.'::'.$alias}     = $accessor;
-}
-
-=pod
-
-=head1 COPYRIGHT
-
-Copyright (c) 2000, Damian Conway and Michael G Schwern. All
-Rights Reserved.  This module is free software. It may be used,
-redistributed and/or modified under the terms of the Perl Artistic
-License (see http://www.perl.com/perl/misc/Artistic.html)
-
-
 =head1 AUTHOR
 
 Original code by Damian Conway.
 
-Maintained by Michael G Schwern <schwern@pobox.com>
+Maintained by Michael G Schwern until September 2005.
 
+Now maintained by Tony Bowden.
+
+=head1 BUGS and QUERIES
+
+Please direct all correspondence regarding this module to:
+  bug-Bit-Vector-Minimal@rt.cpan.org
+
+=head1 COPYRIGHT and LICENSE
+
+Copyright (c) 2000-2005, Damian Conway and Michael G Schwern. 
+All Rights Reserved.  
+
+This module is free software. It may be used, redistributed and/or
+modified under the terms of the Perl Artistic License (see
+http://www.perl.com/perl/misc/Artistic.html)
 
 =head1 SEE ALSO
 
